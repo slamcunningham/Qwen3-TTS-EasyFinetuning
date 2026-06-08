@@ -135,6 +135,37 @@ python src/cli.py infer --checkpoint output/exp1/checkpoint-epoch-2 --speaker my
 
 ---
 
+## ☁️ Cloud Training with Modal
+
+No local GPU? Run the entire pipeline on serverless GPUs with [Modal](https://modal.com) using the included `modal_app.py`. It mirrors the project Dockerfile (same base image and pinned dependencies) and persists datasets, weights, and checkpoints in Modal Volumes between runs.
+
+```bash
+# 1. Install & authenticate (one time)
+pip install modal
+modal setup
+
+# 2. End-to-end: upload local wavs -> prepare -> embed -> train
+modal run modal_app.py \
+    --input-dir ./raw-dataset/my_speaker \
+    --speaker-name my_speaker \
+    --experiment-name exp1 \
+    --epochs 3
+
+# 3. Synthesize with the trained checkpoint (saves a local .wav)
+modal run modal_app.py::synth \
+    --checkpoint output/exp1/checkpoint-epoch-2 \
+    --speaker my_speaker \
+    --text "Hello world! This is my custom voice." \
+    --local-out ./my_voice.wav
+
+# 4. Download checkpoints to your machine
+modal volume get qwen3-tts-output /exp1 ./exp1-checkpoints
+```
+
+Individual stages (`prepare`, `embed`, `train`, `infer`) can also be invoked directly, e.g. `modal run modal_app.py::train --speaker-name my_speaker --experiment-name exp1 --epochs 3`. GPU types and timeouts are configurable at the top of `modal_app.py` — bump `TRAIN_GPU` to `A100-80GB` for the 1.7B models. See the file's docstring for full details.
+
+---
+
 ## 📂 Project Structure
 
 *   `src/webui.py`: Main Gradio interface.
